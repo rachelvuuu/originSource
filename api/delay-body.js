@@ -1,5 +1,4 @@
 export const config = { api: { bodyParser: false } };
-
 export default async function handler(req, res) {
   const delay = parseInt(req.headers["x-delay"] || "1", 10);
   let body = Buffer.from([]);

@@ -1,5 +1,3 @@
 export default async function handler(req, res) {
-  const time = parseInt(req.query.time || "1", 10);
-  await new Promise(resolve => setTimeout(resolve, time * 1000));
-  res.status(200).send(`Client Header Delay of ${time}s completed.`);
+  res.status(200).send("✅ Server received full header. No delay here.");
 }

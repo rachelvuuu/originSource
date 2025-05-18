@@ -1,5 +1,4 @@
 export const config = { api: { bodyParser: false } };
-
 export default async function handler(req, res) {
   let body = Buffer.from([]);
   for await (const chunk of req) {
