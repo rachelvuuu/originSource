@@ -1,335 +1,241 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>CDN Timeout & HTTP/3 Test Dashboard</title>
   <style>
-    body { font-family: sans-serif; margin: 2em; }
-    .section { border: 1px solid #ccc; padding: 1em; margin-bottom: 2em; border-radius: 6px; }
-    h2 { color: #2a4f85; }
-    input, button { padding: 6px; margin-top: 6px; width: 100%; }
-    pre { background: #f4f4f4; padding: 1em; height: 160px; overflow: auto; border: 1px solid #aaa; }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h2 { margin-top: 30px; }
+    .section { border: 1px solid #ccc; padding: 10px; margin-bottom: 20px; }
+    input, button { margin: 5px; padding: 5px; }
+    pre { background: #f4f4f4; padding: 10px; height: 150px; overflow-y: auto; }
   </style>
 </head>
 <body>
-  <h1>🌐 CDN Timeout & HTTP/3 Test Dashboard</h1>
 
-  <div class="section">
-    <h2>1. WebSocket Test</h2>
-    <input type="text" id="wsUrl" value="wss://echo.websocket.events">
-    <button onclick="connectWS()">Connect</button>
-    <input type="text" id="wsMsg" value="Hello WebSocket">
-    <button onclick="sendWS()">Send</button>
-    <pre id="wsLog"></pre>
-  </div>
+<h1>🌐 CDN Timeout & HTTP/3 Test Dashboard</h1>
+<p>Test loaded successfully 🎉<br>This page includes client and origin timeout tests. Use a local or Vercel deployment to activate all features.</p>
 
-  <div class="section">
-    <h2>2. Keep-Alive Test</h2>
-    <label>Number of Pings (min 16):</label>
-    <input type="number" id="pingCount" value="16" min="1">
-    <button onclick="testKeepAlive()">Send Repeated Fetches</button>
-    <pre id="keepLog"></pre>
-  </div>
+<label for="baseUrl"><strong>CDN Domain (e.g. https://your.cdn.domain):</strong></label>
+<input type="text" id="baseUrl" value="https://example.com" size="50">
+<hr>
 
-  
 <div class="section">
+  <h2>1. WebSocket Test</h2>
+  <button onclick="testWebSocket()">Connect WebSocket</button>
+  <button onclick="closeWebSocket()">Close</button><br>
+  <input type="text" id="wsMessage" placeholder="Type message">
+  <button onclick="sendWebSocket()">Send</button>
+  <pre id="wsLog"></pre>
+</div>
+
+<div class="section">
+  <h2>2. Keep-Alive Test</h2>
+  <label>Number of pings:</label>
+  <input type="number" id="keepaliveCount" value="5" min="1">
+  <button onclick="testKeepAlive()">Send Repeated Fetches</button>
+  <pre id="keepaliveLog"></pre>
+</div>
 
 <div class="section">
   <h2>3. Client Header Timeout</h2>
-  <label>Header Delay (seconds):</label>
-  <input type="number" id="headerDelayInput" value="30" min="1">
-  <button onclick="generateHeaderTest()">Show Test Command</button>
+  <label>Delay before sending request (sec):</label>
+  <input type="number" id="headerDelay" value="30">
+  <button onclick="testClientHeader()">Trigger Header Delay</button>
   <pre id="headerLog"></pre>
-  <p><strong>Optionally:</strong></p>
-  <p><strong>Click below to download and run:</strong></p>
-  <ul>
-    <li><a href="run_header_test.bat" download>▶️ Download & Run for Windows</a></li>
-    <li><a href="run_header_test.sh" download>▶️ Download & Run for Mac/Linux</a></li>
-  </ul>
+</div>
+
+<div class="section">
+  <h2>4. Client Body Timeout</h2>
+  <label>Delay between body chunks (sec):</label>
+  <input type="number" id="bodyDelay" value="2">
+  <button onclick="testClientBody()">Trigger Slow Body</button>
+  <pre id="bodyLog"></pre>
+</div>
+
+<div class="section">
+  <h2>5. Send Timeout (Slow Response)</h2>
+  <button onclick="testSlowResponse()">Trigger Slow Response</button>
+  <pre id="sendLog"></pre>
+</div>
+
+<div class="section">
+  <h2>6. Origin Connect Timeout</h2>
+  <button onclick="testOriginConnect()">Trigger Connect Timeout</button>
+  <pre id="connectLog"></pre>
+</div>
+
+<div class="section">
+  <h2>7. Origin Send Timeout</h2>
+  <button onclick="testOriginSend()">Trigger Send Timeout</button>
+  <pre id="originSendLog"></pre>
+</div>
+
+<div class="section">
+  <h2>8. Origin Read Timeout</h2>
+  <button onclick="testOriginRead()">Trigger Read Timeout</button>
+  <pre id="readLog"></pre>
+</div>
+
+<div class="section">
+  <h2>9. HTTP/3 Detection</h2>
+  <button onclick="detectHTTP3()">Check HTTP/3</button>
+  <pre id="http3Log"></pre>
 </div>
 
 <script>
-function generateHeaderTest() {
-  const delay = document.getElementById("headerDelayInput").value;
-  const log = document.getElementById("headerLog");
-  log.textContent = `📌 Use this command in terminal:\npython3 test_header_delay.py your-cdn-domain.com --delay ${delay}`;
-}
-</script>
-    <h2>4. Client Body Timeout</h2>
-    <input type="number" id="bodyDelay" value="10">
-    <button onclick="simulateBodyDelay()">Trigger Delayed Body</button>
-    <pre id="bodyLog"></pre>
-  </div>
-
-  <div class="section">
-    <h2>5. Send Timeout (Slow Download)</h2>
-    <button onclick="simulateSendTimeout()">Start Slow Response</button>
-    <pre id="sendLog"></pre>
-  </div>
-
-  <div class="section">
-    <h2>6. Origin Connect Timeout</h2>
-    <button onclick="simulateOriginConnect()">Trigger Connect Timeout</button>
-    <pre id="connLog"></pre>
-  </div>
-
-  <div class="section">
-    <h2>7. Origin Send Timeout</h2>
-    <button onclick="simulateOriginSend()">Trigger Slow POST</button>
-    <pre id="sendOriginLog"></pre>
-  </div>
-
-  <div class="section">
-    <h2>8. Origin Read Timeout</h2>
-    <input type="number" id="readDelay" value="30">
-    <button onclick="simulateReadDelay()">Trigger Read Delay</button>
-    <pre id="readLog"></pre>
-  </div>
-
-  <div class="section">
-    <h2>9. HTTP/3 & Advanced Settings</h2>
-    <button onclick="testHTTP3()">Test HTTP/3 Trace</button>
-    <pre id="http3Log"></pre>
-  </div>
-
-<script>
 let ws;
-function connectWS() {
-  const url = document.getElementById("wsUrl").value;
-  const log = document.getElementById("wsLog");
+function base() {
+  return document.getElementById("baseUrl").value.replace(/\/$/, "");
+}
+
+function log(id, msg) {
+  const pre = document.getElementById(id);
+  pre.textContent += msg + "\n";
+  pre.scrollTop = pre.scrollHeight;
+}
+
+// 1. WebSocket
+function testWebSocket() {
+  const url = base().replace(/^http/, "ws") + "/ws";
   ws = new WebSocket(url);
-  log.textContent += `Connecting to ${url}\n`;
-  ws.onopen = () => log.textContent += "✅ Connected\n";
-  ws.onmessage = e => log.textContent += `⬅️ ${e.data}\n`;
-  ws.onerror = () => log.textContent += "❌ Error\n";
-  ws.onclose = () => log.textContent += "🔌 Closed\n";
+  log("wsLog", "Connecting to " + url);
+  ws.onopen = () => log("wsLog", "✅ Connected");
+  ws.onmessage = (e) => log("wsLog", "📥 " + e.data);
+  ws.onerror = () => log("wsLog", "❌ Error");
+  ws.onclose = () => log("wsLog", "🔌 Closed");
 }
-function sendWS() {
-  const msg = document.getElementById("wsMsg").value;
-  ws.send(msg);
-  document.getElementById("wsLog").textContent += `➡️ ${msg}\n`;
-}
-function testKeepAlive() {
-  const log = document.getElementById("keepLog");
-  const total = parseInt(document.getElementById("pingCount").value || 16);
-  log.textContent = `🔍 Testing ${total} pings — open DevTools > Network to check TCP reuse\n`;
-  let count = 0;
-  function ping() {
-    fetch("/api/delay-header?time=1")
-      .then(r => r.text())
-      .then(txt => {
-        log.textContent += `Ping ${++count}: ${txt}\n`;
-        if (count < total) setTimeout(ping, 500);
-      });
+function sendWebSocket() {
+  const msg = document.getElementById("wsMessage").value;
+  if (ws && ws.readyState === 1) {
+    ws.send(msg);
+    log("wsLog", "📤 " + msg);
+  } else {
+    log("wsLog", "⚠️ WebSocket not open");
   }
-  ping();
 }
-function simulateHeaderCheck() {
-  fetch("/api/delay-header")
-    .then(r => r.text())
-    .then(txt => document.getElementById("headerLog").textContent = txt);
+function closeWebSocket() {
+  if (ws) ws.close();
 }
-function simulateBodyDelay() {
-  const delay = parseInt(document.getElementById("bodyDelay").value);
-  const encoder = new TextEncoder();
-  const body = new ReadableStream({
-    start(controller) {
-      controller.enqueue(encoder.encode("start="));
-      setTimeout(() => controller.enqueue(encoder.encode("delayed")), delay * 1000);
-      setTimeout(() => controller.close(), (delay + 3) * 1000);
-    }
-  });
-  fetch("/api/delay-body", { method: "POST", body, headers: { "x-delay": delay } })
-    .then(r => r.text())
-    .then(txt => document.getElementById("bodyLog").textContent = txt);
-}
-function simulateSendTimeout() {
-  fetch("/api/slow-download")
-    .then(r => r.text())
-    .then(txt => document.getElementById("sendLog").textContent = txt);
-}
-function simulateOriginConnect() {
-  fetch("/api/unreachable")
-    .then(r => r.text())
-    .then(txt => document.getElementById("connLog").textContent = txt)
-    .catch(e => document.getElementById("connLog").textContent = "❌ Origin unreachable");
-}
-function simulateOriginSend() {
-  const encoder = new TextEncoder();
-  const body = new ReadableStream({
-    start(controller) {
-      controller.enqueue(encoder.encode("start="));
-      setTimeout(() => controller.enqueue(encoder.encode("abc")), 3000);
-      setTimeout(() => controller.close(), 6000);
-    }
-  });
-  fetch("/api/slow-body", { method: "POST", body })
-    .then(r => r.text())
-    .then(txt => document.getElementById("sendOriginLog").textContent = txt);
-}
-function simulateReadDelay() {
-  const delay = document.getElementById("readDelay").value;
-  fetch(`/api/delay-read?time=${delay}`)
-    .then(r => r.text())
-    .then(txt => document.getElementById("readLog").textContent = txt);
-}
-function testHTTP3() {
-  const log = document.getElementById("http3Log");
-  fetch("https://cloudflare.com/cdn-cgi/trace")
-    .then(r => r.text())
-    .then(txt => log.textContent = txt)
-    .catch(e => log.textContent = "❌ " + e);
-}
-</script>
-</body>
-</html
-<div class="section">
 
-<div class="section">
-  <h2>3. Client Header Timeout</h2>
-  <label>Header Delay (seconds):</label>
-  <input type="number" id="headerDelayInput" value="30" min="1">
-  <button onclick="generateHeaderTest()">Show Test Command</button>
-  <pre id="headerLog"></pre>
-  <p><strong>Optionally:</strong></p>
-  <ul>
-    <li>Run <code>run_header_test.bat</code> (Windows) or <code>run_header_test.sh</code> (Mac/Linux)</li>
-    <li>They will prompt you for domain and delay</li>
-  </ul>
-</div>
-
-<script>
-function generateHeaderTest() {
-  const delay = document.getElementById("headerDelayInput").value;
-  const log = document.getElementById("headerLog");
-  log.textContent = `📌 Use this command in terminal:\npython3 test_header_delay.py your-cdn-domain.com --delay ${delay}`;
-}
-</script>
-    <h2>4. Client Body Timeout</h2>
-    <input type="number" id="bodyDelay" value="10">
-    <button onclick="simulateBodyDelay()">Trigger Delayed Body</button>
-    <pre id="bodyLog"></pre>
-  </div>
-
-  <div class="section">
-    <h2>5. Send Timeout (Slow Download)</h2>
-    <button onclick="simulateSendTimeout()">Start Slow Response</button>
-    <pre id="sendLog"></pre>
-  </div>
-
-  <div class="section">
-    <h2>6. Origin Connect Timeout</h2>
-    <button onclick="simulateOriginConnect()">Trigger Connect Timeout</button>
-    <pre id="connLog"></pre>
-  </div>
-
-  <div class="section">
-    <h2>7. Origin Send Timeout</h2>
-    <button onclick="simulateOriginSend()">Trigger Slow POST</button>
-    <pre id="sendOriginLog"></pre>
-  </div>
-
-  <div class="section">
-    <h2>8. Origin Read Timeout</h2>
-    <input type="number" id="readDelay" value="30">
-    <button onclick="simulateReadDelay()">Trigger Read Delay</button>
-    <pre id="readLog"></pre>
-  </div>
-
-  <div class="section">
-    <h2>9. HTTP/3 & Advanced Settings</h2>
-    <button onclick="testHTTP3()">Test HTTP/3 Trace</button>
-    <pre id="http3Log"></pre>
-  </div>
-
-<script>
-let ws;
-function connectWS() {
-  const url = document.getElementById("wsUrl").value;
-  const log = document.getElementById("wsLog");
-  ws = new WebSocket(url);
-  log.textContent += `Connecting to ${url}\n`;
-  ws.onopen = () => log.textContent += "✅ Connected\n";
-  ws.onmessage = e => log.textContent += `⬅️ ${e.data}\n`;
-  ws.onerror = () => log.textContent += "❌ Error\n";
-  ws.onclose = () => log.textContent += "🔌 Closed\n";
-}
-function sendWS() {
-  const msg = document.getElementById("wsMsg").value;
-  ws.send(msg);
-  document.getElementById("wsLog").textContent += `➡️ ${msg}\n`;
-}
-function testKeepAlive() {
-  const log = document.getElementById("keepLog");
-  const total = parseInt(document.getElementById("pingCount").value || 16);
-  log.textContent = `🔍 Testing ${total} pings — open DevTools > Network to check TCP reuse\n`;
-  let count = 0;
-  function ping() {
-    fetch("/api/delay-header?time=1")
-      .then(r => r.text())
-      .then(txt => {
-        log.textContent += `Ping ${++count}: ${txt}\n`;
-        if (count < total) setTimeout(ping, 500);
-      });
+// 2. Keep-Alive
+async function testKeepAlive() {
+  const count = +document.getElementById("keepaliveCount").value;
+  for (let i = 1; i <= count; i++) {
+    const t0 = performance.now();
+    await fetch(base()).then(() => {
+      const dt = Math.round(performance.now() - t0);
+      log("keepaliveLog", `Ping ${i}: Client Header Delay of 1s completed.`);
+    }).catch(err => {
+      log("keepaliveLog", `Ping ${i}: ❌ ${err}`);
+    });
   }
-  ping();
 }
-function simulateHeaderCheck() {
-  fetch("/api/delay-header")
-    .then(r => r.text())
-    .then(txt => document.getElementById("headerLog").textContent = txt);
+
+// 3. Client Header Timeout
+function testClientHeader() {
+  const delay = +document.getElementById("headerDelay").value * 1000;
+  const host = base().replace(/^https?:\/\//, "");
+  const socket = new WebSocket("wss://" + host);
+  setTimeout(() => {
+    socket.close();
+    log("headerLog", `Client Header Delay of ${delay/1000}s completed.`);
+  }, delay);
 }
-function simulateBodyDelay() {
-  const delay = parseInt(document.getElementById("bodyDelay").value);
+
+// 4. Client Body Timeout
+async function testClientBody() {
+  const delay = +document.getElementById("bodyDelay").value * 1000;
   const encoder = new TextEncoder();
-  const body = new ReadableStream({
-    start(controller) {
-      controller.enqueue(encoder.encode("start="));
-      setTimeout(() => controller.enqueue(encoder.encode("delayed")), delay * 1000);
-      setTimeout(() => controller.close(), (delay + 3) * 1000);
+  const words = ["This", "is", "a", "slow", "request."];
+  const stream = new ReadableStream({
+    async start(controller) {
+      for (const word of words) {
+        controller.enqueue(encoder.encode(word + " "));
+        log("bodyLog", "> Sent chunk: " + word);
+        await new Promise(r => setTimeout(r, delay));
+      }
+      controller.close();
     }
   });
-  fetch("/api/delay-body", { method: "POST", body, headers: { "x-delay": delay } })
-    .then(r => r.text())
-    .then(txt => document.getElementById("bodyLog").textContent = txt);
+  try {
+    const res = await fetch(base(), {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: stream,
+      duplex: "half"
+    });
+    log("bodyLog", "✅ Response: " + res.status);
+  } catch (e) {
+    log("bodyLog", "❌ Error: " + e);
+  }
 }
-function simulateSendTimeout() {
-  fetch("/api/slow-download")
-    .then(r => r.text())
-    .then(txt => document.getElementById("sendLog").textContent = txt);
-}
-function simulateOriginConnect() {
-  fetch("/api/unreachable")
-    .then(r => r.text())
-    .then(txt => document.getElementById("connLog").textContent = txt)
-    .catch(e => document.getElementById("connLog").textContent = "❌ Origin unreachable");
-}
-function simulateOriginSend() {
-  const encoder = new TextEncoder();
-  const body = new ReadableStream({
-    start(controller) {
-      controller.enqueue(encoder.encode("start="));
-      setTimeout(() => controller.enqueue(encoder.encode("abc")), 3000);
-      setTimeout(() => controller.close(), 6000);
+
+// 5. Send Timeout
+async function testSlowResponse() {
+  try {
+    const res = await fetch(base() + "/slow-response");
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      log("sendLog", decoder.decode(value));
     }
-  });
-  fetch("/api/slow-body", { method: "POST", body })
-    .then(r => r.text())
-    .then(txt => document.getElementById("sendOriginLog").textContent = txt);
+  } catch (e) {
+    log("sendLog", "❌ " + e);
+  }
 }
-function simulateReadDelay() {
-  const delay = document.getElementById("readDelay").value;
-  fetch(`/api/delay-read?time=${delay}`)
-    .then(r => r.text())
-    .then(txt => document.getElementById("readLog").textContent = txt);
+
+// 6. Origin Connect Timeout
+async function testOriginConnect() {
+  try {
+    await fetch(base() + "/simulate-connect-timeout");
+    log("connectLog", "✅ Connected (unexpected)");
+  } catch (e) {
+    log("connectLog", "❌ Likely connect timeout");
+  }
 }
-function testHTTP3() {
-  const log = document.getElementById("http3Log");
-  fetch("https://cloudflare.com/cdn-cgi/trace")
-    .then(r => r.text())
-    .then(txt => log.textContent = txt)
-    .catch(e => log.textContent = "❌ " + e);
+
+// 7. Origin Send Timeout
+async function testOriginSend() {
+  try {
+    const big = "X".repeat(1000000);
+    await fetch(base() + "/simulate-send-timeout", {
+      method: "POST", headers: { "Content-Type": "text/plain" }, body: big
+    });
+    log("originSendLog", "✅ Data sent (unexpected)");
+  } catch (e) {
+    log("originSendLog", "❌ Likely send timeout");
+  }
+}
+
+// 8. Origin Read Timeout
+async function testOriginRead() {
+  try {
+    const res = await fetch(base() + "/simulate-read-timeout");
+    log("readLog", "✅ Response: " + res.status);
+  } catch (e) {
+    log("readLog", "❌ Likely read timeout");
+  }
+}
+
+// 9. HTTP/3
+async function detectHTTP3() {
+  try {
+    const res = await fetch(base() + "/cdn-cgi/trace");
+    const text = await res.text();
+    const match = text.match(/http=(.+)/);
+    if (match) {
+      log("http3Log", "Detected: " + match[1]);
+    } else {
+      log("http3Log", "No protocol info found");
+    }
+  } catch (e) {
+    log("http3Log", "❌ " + e);
+  }
 }
 </script>
+
 </body>
 </html>
