@@ -1,1 +1,0 @@
-Full CDN Dashboard with backend Flask server and WebSocket support.

@@ -1,0 +1,61 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>CDN Timeout & HTTP/3 Test Dashboard</title>
+</head>
+<body>
+  <h1>CDN Timeout & HTTP/3 Test Dashboard</h1>
+  <button onclick="fetch('/api/slow_response').then(res => res.text()).then(alert)">Trigger Slow Response</button>
+  <button onclick="fetch('/api/simulate_connect_timeout').then(res => res.text()).then(alert)">Trigger Connect Timeout</button>
+  <button onclick="fetch('/api/simulate_send_timeout', { method: 'POST' }).then(res => res.text()).then(alert)">Trigger Send Timeout</button>
+  <button onclick="fetch('/api/simulate_read_timeout').then(res => res.text()).then(alert)">Trigger Read Timeout</button>
+
+<hr>
+<h2>WebSocket Test</h2>
+<button onclick="startWebSocket()">Connect</button>
+<button onclick="disconnectWebSocket()">Disconnect</button>
+<button onclick="sendWebSocket()">Send Message</button>
+<pre id="wsLog"></pre>
+
+<h2>HTTP/3 Detection</h2>
+<button onclick="checkHttp3()">Check HTTP/3 Support</button>
+<pre id="http3Log"></pre>
+
+<script>
+let socket;
+
+function startWebSocket() {
+  socket = new WebSocket("wss://echo.websocket.events");
+  const log = document.getElementById("wsLog");
+  socket.onopen = () => log.textContent += "✅ WebSocket connected\n";
+  socket.onmessage = (e) => log.textContent += "📥 " + e.data + "\n";
+  socket.onerror = (e) => log.textContent += "❌ WebSocket error\n";
+  socket.onclose = () => log.textContent += "🔌 WebSocket closed\n";
+}
+
+function disconnectWebSocket() {
+  if (socket) socket.close();
+}
+
+function sendWebSocket() {
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send("Ping from browser");
+  }
+}
+
+function checkHttp3() {
+  fetch("https://cloudflare-quic.com/cdn-cgi/trace")
+    .then(res => res.text())
+    .then(data => {
+      const supports = data.includes("http3=on");
+      document.getElementById("http3Log").textContent = supports
+        ? "✅ HTTP/3 is supported by this connection"
+        : "❌ HTTP/3 is not supported";
+    });
+}
+</script>
+
+</body>
+</html>
