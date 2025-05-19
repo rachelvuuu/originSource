@@ -12,73 +12,60 @@
   </style>
 </head>
 <body>
-
 <h1>🌐 CDN Timeout & HTTP/3 Test Dashboard</h1>
-<p>Test loaded successfully 🎉<br>This page includes client and origin timeout tests. Use a local or Vercel deployment to activate all features.</p>
+<p>Includes tests for WebSocket, Keep-Alive, client/origin timeout, and HTTP/3 detection.</p>
 
-<label for="baseUrl"><strong>CDN Domain (e.g. https://your.cdn.domain):</strong></label>
-<input type="text" id="baseUrl" value="https://example.com" size="50">
+<label for="baseUrl"><strong>CDN Domain:</strong></label>
+<input type="text" id="baseUrl" value="http://localhost:8080" size="50">
 <hr>
 
-<div class="section">
-  <h2>1. WebSocket Test</h2>
-  <button onclick="testWebSocket()">Connect WebSocket</button>
+<div class="section"><h2>1. WebSocket Test</h2>
+  <button onclick="testWebSocket()">Connect</button>
   <button onclick="closeWebSocket()">Close</button><br>
   <input type="text" id="wsMessage" placeholder="Type message">
   <button onclick="sendWebSocket()">Send</button>
   <pre id="wsLog"></pre>
 </div>
 
-<div class="section">
-  <h2>2. Keep-Alive Test</h2>
-  <label>Number of pings:</label>
+<div class="section"><h2>2. Keep-Alive Test</h2>
   <input type="number" id="keepaliveCount" value="5" min="1">
   <button onclick="testKeepAlive()">Send Repeated Fetches</button>
   <pre id="keepaliveLog"></pre>
 </div>
 
-<div class="section">
-  <h2>3. Client Header Timeout</h2>
-  <label>Delay before sending request (sec):</label>
+<div class="section"><h2>3. Client Header Timeout</h2>
   <input type="number" id="headerDelay" value="30">
   <button onclick="testClientHeader()">Trigger Header Delay</button>
   <pre id="headerLog"></pre>
 </div>
 
-<div class="section">
-  <h2>4. Client Body Timeout</h2>
-  <label>Delay between body chunks (sec):</label>
+<div class="section"><h2>4. Client Body Timeout</h2>
   <input type="number" id="bodyDelay" value="2">
   <button onclick="testClientBody()">Trigger Slow Body</button>
   <pre id="bodyLog"></pre>
 </div>
 
-<div class="section">
-  <h2>5. Send Timeout (Slow Response)</h2>
+<div class="section"><h2>5. Send Timeout</h2>
   <button onclick="testSlowResponse()">Trigger Slow Response</button>
   <pre id="sendLog"></pre>
 </div>
 
-<div class="section">
-  <h2>6. Origin Connect Timeout</h2>
+<div class="section"><h2>6. Origin Connect Timeout</h2>
   <button onclick="testOriginConnect()">Trigger Connect Timeout</button>
   <pre id="connectLog"></pre>
 </div>
 
-<div class="section">
-  <h2>7. Origin Send Timeout</h2>
+<div class="section"><h2>7. Origin Send Timeout</h2>
   <button onclick="testOriginSend()">Trigger Send Timeout</button>
   <pre id="originSendLog"></pre>
 </div>
 
-<div class="section">
-  <h2>8. Origin Read Timeout</h2>
+<div class="section"><h2>8. Origin Read Timeout</h2>
   <button onclick="testOriginRead()">Trigger Read Timeout</button>
   <pre id="readLog"></pre>
 </div>
 
-<div class="section">
-  <h2>9. HTTP/3 Detection</h2>
+<div class="section"><h2>9. HTTP/3 Detection</h2>
   <button onclick="detectHTTP3()">Check HTTP/3</button>
   <pre id="http3Log"></pre>
 </div>
@@ -88,14 +75,11 @@ let ws;
 function base() {
   return document.getElementById("baseUrl").value.replace(/\/$/, "");
 }
-
 function log(id, msg) {
   const pre = document.getElementById(id);
   pre.textContent += msg + "\n";
   pre.scrollTop = pre.scrollHeight;
 }
-
-// 1. WebSocket
 function testWebSocket() {
   const url = base().replace(/^http/, "ws") + "/ws";
   ws = new WebSocket(url);
@@ -117,33 +101,27 @@ function sendWebSocket() {
 function closeWebSocket() {
   if (ws) ws.close();
 }
-
-// 2. Keep-Alive
 async function testKeepAlive() {
   const count = +document.getElementById("keepaliveCount").value;
   for (let i = 1; i <= count; i++) {
     const t0 = performance.now();
     await fetch(base()).then(() => {
       const dt = Math.round(performance.now() - t0);
-      log("keepaliveLog", `Ping ${i}: Client Header Delay of 1s completed.`);
+      log("keepaliveLog", `Ping ${i}: completed in ${dt}ms`);
     }).catch(err => {
       log("keepaliveLog", `Ping ${i}: ❌ ${err}`);
     });
   }
 }
-
-// 3. Client Header Timeout
 function testClientHeader() {
   const delay = +document.getElementById("headerDelay").value * 1000;
   const host = base().replace(/^https?:\/\//, "");
-  const socket = new WebSocket("wss://" + host);
+  const socket = new WebSocket("wss://" + host + "/ws");
   setTimeout(() => {
     socket.close();
     log("headerLog", `Client Header Delay of ${delay/1000}s completed.`);
   }, delay);
 }
-
-// 4. Client Body Timeout
 async function testClientBody() {
   const delay = +document.getElementById("bodyDelay").value * 1000;
   const encoder = new TextEncoder();
@@ -170,8 +148,6 @@ async function testClientBody() {
     log("bodyLog", "❌ Error: " + e);
   }
 }
-
-// 5. Send Timeout
 async function testSlowResponse() {
   try {
     const res = await fetch(base() + "/slow-response");
@@ -186,8 +162,6 @@ async function testSlowResponse() {
     log("sendLog", "❌ " + e);
   }
 }
-
-// 6. Origin Connect Timeout
 async function testOriginConnect() {
   try {
     await fetch(base() + "/simulate-connect-timeout");
@@ -196,8 +170,6 @@ async function testOriginConnect() {
     log("connectLog", "❌ Likely connect timeout");
   }
 }
-
-// 7. Origin Send Timeout
 async function testOriginSend() {
   try {
     const big = "X".repeat(1000000);
@@ -209,8 +181,6 @@ async function testOriginSend() {
     log("originSendLog", "❌ Likely send timeout");
   }
 }
-
-// 8. Origin Read Timeout
 async function testOriginRead() {
   try {
     const res = await fetch(base() + "/simulate-read-timeout");
@@ -219,8 +189,6 @@ async function testOriginRead() {
     log("readLog", "❌ Likely read timeout");
   }
 }
-
-// 9. HTTP/3
 async function detectHTTP3() {
   try {
     const res = await fetch(base() + "/cdn-cgi/trace");
@@ -236,6 +204,5 @@ async function detectHTTP3() {
   }
 }
 </script>
-
 </body>
 </html>
